@@ -45,6 +45,7 @@ public static class AuthorPanel
 
     private static readonly Color Accent = new Color(25, 200, 255, 255);
     private static readonly Color Dim = new Color(170, 180, 190, 255);
+    private static readonly Color Amber = new Color(255, 190, 60, 255);
     private static readonly Color PanelBack = new Color(10, 14, 20, 232);
     private static readonly Color CrewBack = new Color(8, 11, 16, 248);
 
@@ -174,6 +175,10 @@ public static class AuthorPanel
             if (width < S(260f) || width > screen.X - left) return;                        // no room on this screen
             float pictureSize = picture != null ? S(76f) : 0f;
             float pictureHeight = picture != null ? pictureSize * picture.Height / Math.Max(1, picture.Width) : 0f;
+            // when the XML patches did not come in time the first line says so (TranslationCheck), in amber
+            TranslationCheck.Run();
+            string bodyText = TranslationCheck.Problem ?? Body;
+            Color bodyColor = TranslationCheck.Problem != null ? Amber : Color.White;
             bool showPicture = picture != null, showHeader = true, showBody = true, showNote = true;
             float textX = 0f, textWidth = 0f, headerH = 0f, bodyH = 0f, noteH = 0f;
             float Measure()
@@ -181,7 +186,7 @@ public static class AuthorPanel
                 textX = pad + (showPicture ? pictureSize + pad : 0f);
                 textWidth = width - textX - pad;
                 headerH = showHeader ? TextHeight(Header, FontSize.Small, true, textWidth) : 0f;
-                bodyH = showBody ? TextHeight(Body, FontSize.Small, false, textWidth) : 0f;
+                bodyH = showBody ? TextHeight(bodyText, FontSize.Small, false, textWidth) : 0f;
                 noteH = showNote ? TextHeight(CrewNote, FontSize.Small, false, textWidth) : 0f;
                 float text = pad + (showHeader ? headerH + gap : 0f) + (showBody ? bodyH + gap : 0f) + (showNote ? noteH + gap : 0f) + buttonH;
                 return Math.Max(text, showPicture ? pad + pictureHeight : 0f) + pad;
@@ -218,7 +223,7 @@ public static class AuthorPanel
             }
             if (showBody)
             {
-                Label(panel, "CFLabsAuthorBody", Body, textX, y, textWidth, Color.White, false, FontSize.Small);
+                Label(panel, "CFLabsAuthorBody", bodyText, textX, y, textWidth, bodyColor, false, FontSize.Small);
                 y += bodyH + gap;
             }
             if (showNote)
