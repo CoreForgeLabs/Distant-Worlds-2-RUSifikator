@@ -24,43 +24,53 @@ public class ModConfig
     // --- ResearchTree.DrawProjectDetail (карточка целиком — шапка + тело) ---
     // Финальный scale = clamp(ширина_окна / BaseWidth, MinScale, MaxScale) * SizeXScale (множитель пользователя).
     // Адаптивная база подстраивается под разрешение: FHD ~1.0, 2K ~1.3, 4K ~1.8.
-    public float ProjectDetail_SizeXScale = 1.0f;            // пользовательский множитель ПОВЕРХ адаптивной базы
+    public float ProjectDetail_SizeXScale = 1.10f;            // пользовательский множитель ПОВЕРХ адаптивной базы
     public bool Enable_ProjectDetailWiden = true;
-    public bool ProjectDetail_AdaptiveScale = true;          // включает зависимость от разрешения
+    public bool ProjectDetail_AdaptiveScale = false;          // включает зависимость от разрешения
     public float ProjectDetail_BaseWidth = 1920f;            // референсное разрешение для scale=1.0
     public float ProjectDetail_MinScale = 1.0f;              // нижний предел адаптивной базы
     public float ProjectDetail_MaxScale = 1.8f;              // верхний предел адаптивной базы
 
     // Tier-boost: для одиночных карточек (мало weapon-вариантов) — больше доп. растяжения, для многокомпонентных — меньше.
     // Финальный scale = adaptive * userScale * tierBoost(componentCount)
-    public bool ProjectDetail_TierBoost = true;
-    public float ProjectDetail_TierSingleBoost = 1.25f;      // 1 компонент → ×1.25
-    public float ProjectDetail_TierMultiBoost = 1.10f;       // 2+ компонентов → ×1.10
+    public bool ProjectDetail_TierBoost = false;
+    public float ProjectDetail_TierSingleBoost = 1.0f;      // 1 компонент → ×1.25
+    public float ProjectDetail_TierMultiBoost = 1.0f;       // 2+ компонентов → ×1.10
 
     // --- UIH.DrawComponent / DrawComponentValues и т.п. ---
     // Растягиваем переданный rectangle.Width перед рендером (увеличивает доступное место карточки).
-    public float Component_RectWidthScale = 1.25f;
+    public float Component_RectWidthScale = 1.0f;
 
     // Множитель labelWidth у UIH.Draw* методов. Русские лейблы длиннее английских — нужно больше места под метку.
-    public float Component_LabelWidthScale = 1.40f;
+    public float Component_LabelWidthScale = 1.0f;
 
     // --- DrawComponentStats / DrawComponentStatsComparison (короткая сигнатура без labelWidth-зависимых калк) ---
-    public float Stats_RectWidthScale  = 1.25f;
-    public float Stats_LabelWidthScale = 1.40f;
+    public float Stats_RectWidthScale  = 1.0f;
+    public float Stats_LabelWidthScale = 1.0f;
 
     // Прибавка к зазору между [S] и [M] колонками в Comparison-методах
     public float Component_ComponentMarginAdd = 0f;  // только для DrawComponentComparison
     public float Stats_MarginAdd              = 0f;  // только для DrawComponentStatsComparison
 
     // Сдвиг X для "второй колонки" (когда rect.X > предыдущего + 100). Создаёт зазор между [S] и [M].
-    public float SecondColumnXOffset = 50f;
+    public float SecondColumnXOffset = 0f;
 
-    public bool VerboseLog = true;
+    public bool VerboseLog = false;
+
+    // Texts that the game assembles in code from English literals are rebuilt from GameText keys
+    // (SituationText.cs and the like). Independent of the research-card widening above.
+    public bool Enable_TextFixes = true;
+
+    // The panel about the author in the main menu (AuthorPanel.cs).
+    public bool Enable_AuthorPanel = true;
+
+    // Developer aid: log texts that the game assembles in code and that still contain English (TextDiag.cs).
+    public bool Diag_TextHelper = false;
 
     // Включение/отключение групп патчей (для изоляции при падениях)
-    public bool Enable_ResearchTreeWidth = true;
-    public bool Enable_DrawComponent     = true;
-    public bool Enable_DrawComponentStats = true;
+    public bool Enable_ResearchTreeWidth = false;
+    public bool Enable_DrawComponent     = false;
+    public bool Enable_DrawComponentStats = false;
 }
 
 public static class ModInit
@@ -68,25 +78,47 @@ public static class ModInit
     public static ModConfig Config = new ModConfig();
     public static bool _initialized;
 
-    private static string ModDir =>
+    internal static string ModDir =>
         Path.GetDirectoryName(typeof(ModInit).Assembly.Location) ?? ".";
-    private static string LogPath    => Path.Combine(ModDir, "RussianUiMod.log");
+    // The mod folder may be a Steam Workshop folder that Steam re-syncs: nothing is written there.
+    private static string LogPath    => Path.Combine(AppContext.BaseDirectory, "data", "Logs", "RussianUiMod.log");
+    /// <summary>Settings handed over by DW2 Mod Launcher (InitWithOptions); they win over the config file.</summary>
+    public static string? LauncherOptions;
     private static string ConfigPath => Path.Combine(ModDir, "RussianUiMod.config.json");
 
+    /// <summary>
+    /// Returns at once: the launcher's loader calls this before it hooks the game's XML loading, and every
+    /// millisecond spent here is a head start for the game (see StartupGate.cs). The patches are applied on
+    /// a background thread, after the loader has had its turn.
+    /// </summary>
     public static void Initialize()
     {
         if (_initialized) return;
         _initialized = true;
+        new System.Threading.Thread(ApplyPatches) { IsBackground = true, Name = "RussianUiMod patches" }.Start();
+    }
+
+    private static void ApplyPatches()
+    {
         try
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             LoadOrCreateConfig();
-            Log("=== RussianUiMod (ui_mod2) loaded ===");
+            Log("=== RussianUiMod 2.0.0 loaded from " + ModDir + " ===");
             foreach (var f in typeof(ModConfig).GetFields())
                 Log($"  {f.Name} = {f.GetValue(Config)}");
-
+            if (StartupOrder.LoaderPresent())
+            {
+                // the loader goes first: see StartupGate.cs
+                long widget = StartupOrder.WaitFor(8000, StartupOrder.WidgetHooked);
+                StartupGate.Install();
+                long hooks = StartupOrder.WaitFor(12000, StartupOrder.XmlHooked);
+                Log("Start-up: the launcher's first patch after " + widget + " ms, its xml hooks after another " + hooks + " ms (-1 = not reported)");
+            }
+            long before = sw.ElapsedMilliseconds;
             var h = new Harmony("ru.dw2.ui2");
             h.PatchAll(typeof(ModInit).Assembly);
-            Log("Harmony PatchAll done");
+            Log("Harmony PatchAll done in " + (sw.ElapsedMilliseconds - before) + " ms");
             DumpResearchTreeInfo();
         }
         catch (Exception ex)
@@ -111,10 +143,14 @@ public static class ModInit
                 }) ?? new ModConfig();
                 Log("Config loaded: " + ConfigPath);
             }
-            else
+            if (!string.IsNullOrWhiteSpace(LauncherOptions) && LauncherOptions.Trim() != "{}")
             {
-                WriteDefaultConfig();
-                Log("Config created at: " + ConfigPath);
+                Config = JsonSerializer.Deserialize<ModConfig>(LauncherOptions, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    IncludeFields = true,
+                }) ?? Config;
+                Log("Config taken from the launcher settings");
             }
         }
         catch (Exception ex)

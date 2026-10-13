@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RussianUiMod</AssemblyName>
+    <RootNamespace>RussianUiMod</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Version>2.0.0</Version>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType>none</DebugType>
+    <!-- the game folder (0Harmony.dll, Stride*.dll): dotnet build -p:GameDir="D:\...\Distant Worlds 2" -->
+    <GameDir Condition="'$(GameDir)' == ''">$(MSBuildProjectDirectory)\game</GameDir>
+    <!-- reference assemblies of DistantWorlds.Types and DistantWorlds.UI: the game's own code, not in this repository -->
+    <RefDir Condition="'$(RefDir)' == ''">$(MSBuildProjectDirectory)\ref</RefDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(GameDir)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="DistantWorlds.Types"><HintPath>$(RefDir)\DistantWorlds.Types.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="DistantWorlds.UI"><HintPath>$(RefDir)\DistantWorlds.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Input"><HintPath>$(GameDir)\Stride.Input.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Core"><HintPath>$(GameDir)\Stride.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride"><HintPath>$(GameDir)\Stride.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Graphics"><HintPath>$(GameDir)\Stride.Graphics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Engine"><HintPath>$(GameDir)\Stride.Engine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Core.Mathematics"><HintPath>$(GameDir)\Stride.Core.Mathematics.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="settings.schema.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

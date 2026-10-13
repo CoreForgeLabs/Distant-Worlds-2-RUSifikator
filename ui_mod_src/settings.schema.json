@@ -1,0 +1,11 @@
+{
+  "fields": [
+    {"key": "Enable_ProjectDetailWiden", "type": "bool", "label": "Расширять карточку исследования", "description": "Русские названия длиннее английских: карточка проекта в дереве исследований делается шире.", "default": true},
+    {"key": "ProjectDetail_SizeXScale", "type": "float", "label": "Ширина карточки исследования", "description": "1.0 - как в игре; 1.1 - на 10% шире.", "min": 1.0, "max": 1.8, "default": 1.1},
+    {"key": "ProjectDetail_AdaptiveScale", "type": "bool", "label": "Подстраивать ширину под разрешение", "description": "Дополнительно расширяет карточку на 2K и 4K.", "default": false},
+    {"key": "Enable_AuthorPanel", "type": "bool", "label": "Панель об авторе в главном меню", "description": "Плашка CFLabs со ссылкой на Boosty и списком поддержавших.", "default": true}
+  ],
+  "Для разработчика": [
+    {"key": "VerboseLog", "type": "bool", "label": "Подробный лог", "description": "Пишет подробности в data/Logs/RussianUiMod.log.", "default": false, "hidden": true}
+  ]
+}
